@@ -1,50 +1,76 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
-import React from "react";
 import "./index.css";
 
 function CountdownTimer() {
-  const [day, setDay] = useState(new Date());
-  const [timeRemaining, setTimeRemaining] = useState(day);
+  const [day, setDay] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return date;
+  });
+
+  const [timeRemaining, setTimeRemaining] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    return date.getTime() - Date.now();
+  });
+
   const running = useRef(null);
-  const [button1,setButton1]=useState(true);
 
-  const App = (time) => {
-    const futureDate = day;
-    const presentDate = new Date();
-    var seconds = Math.floor((futureDate - presentDate) / 1000);
-    var minutes = Math.floor(seconds / 60);
-    var hours = Math.floor(minutes / 60);
-    var days = Math.floor(hours / 24);
+  const [isRunning, setIsRunning] = useState(false);
 
-    hours = hours - days * 24;
-    minutes = minutes - days * 24 * 60 - hours * 60;
-    seconds = seconds - days * 24 * 60 * 60 - hours * 60 * 60 - minutes * 60;
+  const formatTime = (milliseconds) => {
+    if (milliseconds <= 0) {
+      return "0:0:0:0";
+    }
+
+    let seconds = Math.floor(milliseconds / 1000);
+
+    const days = Math.floor(seconds / (24 * 60 * 60));
+    seconds = seconds % (24 * 60 * 60);
+
+    const hours = Math.floor(seconds / (60 * 60));
+    seconds = seconds % (60 * 60);
+
+    const minutes = Math.floor(seconds / 60);
+    seconds = seconds % 60;
+
     return `${days}:${hours}:${minutes}:${seconds}`;
   };
 
   const startButton = () => {
     if (running.current !== null) {
       return;
-    } else {
-      running.current = window.setInterval(() => {
-        setTimeRemaining(
-          (prevtimeRemaining) => new Date(prevtimeRemaining.getTime() - 1000)
-        );
-      }, 1000);
-      setButton1(false);
     }
+
+    running.current = window.setInterval(() => {
+      setTimeRemaining((previousTime) => {
+        const newTime = previousTime - 1000;
+
+        // Stop timer when countdown reaches zero
+        if (newTime <= 0) {
+          clearInterval(running.current);
+          running.current = null;
+          setIsRunning(false);
+
+          return 0;
+        }
+
+        return newTime;
+      });
+    }, 1000);
+
+    setIsRunning(true);
   };
 
   const stopButton = () => {
     if (running.current === null) {
       return;
-    } else {
-      clearInterval(running.current);
-      running.current = null;
-      setButton1(true);
-
     }
+
+    clearInterval(running.current);
+    running.current = null;
+    setIsRunning(false);
   };
 
   const resetButton = () => {
@@ -52,8 +78,28 @@ function CountdownTimer() {
       clearInterval(running.current);
     }
 
-    setTimeRemaining(day);
+    const newTime = day.getTime() - Date.now();
+
+    setTimeRemaining(newTime > 0 ? newTime : 0);
     running.current = null;
+    setIsRunning(false);
+  };
+
+  const onchangeDate = (event) => {
+    const userEnter = new Date(event.target.value);
+
+    setDay(userEnter);
+
+    const newTime = userEnter.getTime() - Date.now();
+
+    setTimeRemaining(newTime > 0 ? newTime : 0);
+
+    if (running.current !== null) {
+      clearInterval(running.current);
+      running.current = null;
+    }
+
+    setIsRunning(false);
   };
 
   useEffect(() => {
@@ -63,35 +109,42 @@ function CountdownTimer() {
       }
     };
   }, []);
-  console.log(day);
-  const onchangeDate = (date) => {
-    const userEnter = new Date(date.target.value);
-    console.log(userEnter);
-    setDay(userEnter);
-    setTimeRemaining(userEnter);
-  };
 
   return (
     <div className="maindiv">
       <div className="buttt">
         <h2>Time left for your goals</h2>
-        <h1 className="h11">{App(timeRemaining)}</h1>
+
+        <h1 className="h11">
+          {formatTime(timeRemaining)}
+        </h1>
+
         <h4>Enter date</h4>
-        <input type="date" onChange={(e) => onchangeDate(e)} />
+
+        <input
+          type="date"
+          onChange={onchangeDate}
+        />
+
         <div className="space">
-          
+          {isRunning ? (
+            <button onClick={stopButton}>
+              <span className="material-symbols-outlined">
+                pause
+              </span>
+            </button>
+          ) : (
+            <button onClick={startButton}>
+              <span className="material-symbols-outlined">
+                play_circle
+              </span>
+            </button>
+          )}
 
-        {button1?<button onClick={startButton}>
-            <span className="material-symbols-outlined">play_circle</span>
-          </button>:<button onClick={stopButton}>
-            <span className="material-symbols-outlined">pause</span>
-          </button>}
-
-
-
-          
           <button onClick={resetButton}>
-            <span className="material-symbols-outlined">restart_alt</span>
+            <span className="material-symbols-outlined">
+              restart_alt
+            </span>
           </button>
         </div>
       </div>
